@@ -1,0 +1,54 @@
+---
+- name: configure webserver 
+  hosts: epam
+  gather_facts: true
+  become: true
+  vars:
+    tls_port: 443
+    no_tls_port: 80 
+
+  tasks:
+
+  - name: Delete file index.html
+    file:
+      path: /var/www/html/index.html
+      state: absent
+    
+  - name: Stoped service httpd
+    service:
+      name: httpd
+      state: stopped
+      enabled: false
+  
+  - name: Uninstall httpd Apache
+    yum:
+      name: httpd
+      state: absent
+  
+  - name: firewalld rule to close ports 443
+    firewalld:
+      port: "{{ tls_port }}/tcp"
+      permanent: true
+      state: disabled
+      immediate: true
+  
+  - name: firewalld rule to close ports 80
+    firewalld:
+      port: "{{ no_tls_port }}/tcp"
+      permanent: true
+      state: disabled
+      immediate: true
+ 
+
+  - name: check web site from control server   
+    uri:
+      url: "http://{{ inventory_hostname }}"
+      return_content: true
+      validate_certs: false
+    #connection: local
+    register: example_webpage_out
+    failed_when: example_webpage_out.status != 200
+    ignore_errors: true
+  
+
+  
